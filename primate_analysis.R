@@ -1,9 +1,10 @@
 rm(list=ls())
 
 library(readr)
-MRI_volume <- read_csv("/Users/mackcross/Documents/research_projects/primate_CNS_project/raw_data/Navarrete_MRI_volume.csv")
-organ_size <- read_csv("/Users/mackcross/Documents/research_projects/primate_CNS_project/raw_data/Navarrete_brain_organ_size.csv", skip = 4)
-eye_morphology <- read_csv("/Users/mackcross/Documents/research_projects/primate_CNS_project/raw_data/Kirk_eye_morphology.csv")
+MRI_volume <- read_csv("/Users/mackcross/Documents/research_projects/primate_CNS_project/downloaded_data/Navarrete_MRI_volume.csv")
+organ_size <- read_csv("/Users/mackcross/Documents/research_projects/primate_CNS_project/downloaded_data/Navarrete_brain_organ_size.csv", skip = 4)
+sleep_data <- read_csv("/Users/mackcross/Documents/research_projects/primate_CNS_project/downloaded_data/Nunn_phylogenetic_sleep.csv", skip = 2)
+eye_morphology <- read_csv("/Users/mackcross/Documents/research_projects/primate_CNS_project/downloaded_data/Ross_eye_morphology.csv")
 
 ######################################################################################################################################
 ######################################################################################################################################
@@ -38,6 +39,9 @@ names(MRI_volume)[names(MRI_volume) == "Lateral geniculate nucleii (mm3)"] <- "l
 names(MRI_volume)[names(MRI_volume) == "Right lateral geniculate nucleus (mm3)"] <- "r_lateral_geniculate_nucleus_mm3"
 names(MRI_volume)[names(MRI_volume) == "Left lateral geniculate nucleus (mm3)"] <- "l_lateral_geniculate_nucleus_mm3"
 names(MRI_volume)[names(MRI_volume) == "Cerebellum (mm3)"] <- "cerebellum_mm3"
+
+# Changed species name 
+MRI_volume$species <- sub(" ", "_", MRI_volume$species)
 
 print(MRI_volume)
 
@@ -75,11 +79,11 @@ names(organ_size)[names(organ_size) == "Species"] <- "species"
 
 # Changed data types 
 organ_size$order <- factor(organ_size$order)
-organ_size$body_mass_to_organ <- as.integer(organ_size$body_mass_to_organ)
-organ_size$body_mass_to_bmr <- as.integer(organ_size$body_mass_to_bmr)
-organ_size$fat_free_body_mass <- as.integer(organ_size$fat_free_body_mass)
-organ_size$brain_mass <- as.integer(organ_size$brain_mass)
-organ_size$heart_mass <- as.integer(organ_size$heart_mass)
+organ_size$body_mass_to_organ <- as.integer(organ_size$body_mass_to_organ_g)
+organ_size$body_mass_to_bmr <- as.integer(organ_size$body_mass_to_bmr_g)
+organ_size$fat_free_body_mass <- as.integer(organ_size$fat_free_body_mass_g)
+organ_size$brain_mass <- as.integer(organ_size$brain_mass_g)
+organ_size$heart_mass <- as.integer(organ_size$heart_mass_g)
 
 print(organ_size, n=24) 
 
@@ -87,58 +91,56 @@ print(organ_size, n=24)
 ######################################################################################################################################
 ######################################################################################################################################
 # CLEAN EYE MORPHOLOGY
-# Removed animals which weren't primates or scandentians
-eye_morphology <- eye_morphology[c(1:55, 99:102), ]
-
-# Changed names and removed unnecessary columns
-colnames(eye_morphology)
-names(eye_morphology)[names(eye_morphology) == "Taxon"] <- "species"
-names(eye_morphology)[names(eye_morphology) == "N"] <- "specimen_number"
-names(eye_morphology)[names(eye_morphology) == "AP"] <- "activity_pattern"
-names(eye_morphology)[names(eye_morphology) == "TD"] <- "eye_diameter"
-names(eye_morphology)[names(eye_morphology) == "CD"] <- "corneal_diameter"
-names(eye_morphology)[names(eye_morphology) == "CD:TD"] <- "ratio_corneal_eye"
-eye_morphology$SD...5 <- NULL
-eye_morphology$SD...7 <- NULL
 
 # Changed data types 
-eye_morphology$activity_pattern <- factor(eye_morphology$activity_pattern)
-eye_morphology$specimen_number <- as.integer(eye_morphology$specimen_number)
+sapply(eye_morphology, class)
+eye_morphology$activity_code <- factor(eye_morphology$activity_code)
 
-# Renamed activity levels 
-levels(eye_morphology$activity_pattern) <- c("cathemeral", "diurnal", "nocturnal")
+# Created genus/species column 
+eye_morphology$genus_species <- paste(eye_morphology$genus, eye_morphology$species)
 
 print(eye_morphology, n=60)
 
 
 ######################################################################################################################################
 ######################################################################################################################################
+# CLEAN SLEEP DATA 
+
+# Changed names 
+names(sleep_data)[names(sleep_data) == "Species"] <- "species"
+names(sleep_data)[names(sleep_data) == "TST"] <- "total_sleep_time"
+names(sleep_data)[names(sleep_data) == "REM"] <- "rem"
+names(sleep_data)[names(sleep_data) == "NREM"] <- "nrem"
+names(sleep_data)[names(sleep_data) == "Endocranial Volume"] <- "endocranial_volume"
+names(sleep_data)[names(sleep_data) == "Male Mass (kg)"] <- "male_mass_kg"
+names(sleep_data)[names(sleep_data) == "Female_Mass (kg)"] <- "female_mass_kg"
+names(sleep_data)[names(sleep_data) == "Folivory"] <- "folivory"
+names(sleep_data)[names(sleep_data) == "N_Diet_Category"] <- "diet_category"
+names(sleep_data)[names(sleep_data) == "Open_Habitat"] <- "open_habitat"
+names(sleep_data)[names(sleep_data) == "Activity Period"] <- "activity_period"
+names(sleep_data)[names(sleep_data) == "Terrestrial"] <- "terrestrial"
+names(sleep_data)[names(sleep_data) == "Day Journey Length"] <- "day_journey_length"
+names(sleep_data)[names(sleep_data) == "Group Size"] <- "group_size"
+names(sleep_data)[names(sleep_data) == "Nocturnal"] <- "nocturnal"
+names(sleep_data)[names(sleep_data) == "Cathemeral"] <- "cathemeral"
+
+# Changed data types 
+sleep_data$activity_period <- factor(sleep_data$activity_period)
+
+print(sleep_data)
 
 
-df <- merge(organ_size, MRI_volume, by.x = "species", by.y = "species")
+######################################################################################################################################
+######################################################################################################################################
+# Merging data frames 
+df <- merge(sleep_data, MRI_volume, by.x = "species", by.y = "species")
 print(df)
 
 library(ggplot2)
-p <- ggplot(data = df, aes(x=fat_free_body_mass, y=total_brain_vol_mm3, color=species))
+p <- ggplot(data = df, aes(x=total_sleep_time, y=total_brain_vol_mm3, color=species))
 p <- p + geom_point()
+p <- p + facet_grid(.~activity_period)
 p 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
